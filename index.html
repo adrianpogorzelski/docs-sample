@@ -62,7 +62,114 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="sample-documentation">Sample documentation</h1></div>
+<h1 id="sample-documentation">Sample documentation</h1>
+<pre><code>import os
+import platform
+import subprocess
+import sys
+import tarfile
+import zipfile
+import urllib.request
+
+PAGEFIND_DIR = &quot;pagefind&quot;
+VERSION = &quot;v1.3.0&quot;
+
+# Check if PageFind binary is already installed
+def is_installed():
+    return os.path.isfile(os.path.join(PAGEFIND_DIR, &quot;pagefind&quot;))
+
+# Detect processor architecture
+def get_architecture():
+    arch = platform.machine()
+    return &quot;x86_64&quot; if arch in (&quot;AMD64&quot;, &quot;x86_64&quot;) else &quot;aarch64&quot;
+
+# Detect operating system
+def get_os():
+    os_name = platform.system()
+    if os_name == &quot;Darwin&quot;:
+        return &quot;apple-darwin&quot; # MacOs
+    elif os_name == &quot;Linux&quot;:
+        return &quot;unknown-linux-musl&quot;
+    elif os_name.startswith(&quot;Windows&quot;):
+        return &quot;pc-windows-msvc&quot;
+    else:
+        print(f&quot;Unsupported OS: {os_name}&quot;)
+        sys.exit(1)
+
+# Construct the correct PageFind download URL.
+def get_download_url():
+    arch = get_architecture()
+    os_name = get_os()
+
+    if &quot;windows&quot; in os_name:
+        bin_name = f&quot;pagefind-{VERSION}-x86_64-{os_name}.zip&quot;
+    else:
+        bin_name = f&quot;pagefind-{VERSION}-{arch}-{os_name}.tar.gz&quot;
+
+    url = f&quot;https://github.com/CloudCannon/pagefind/releases/download/{VERSION}/{bin_name}&quot;
+    return url, bin_name
+
+# Download PageFind binary
+def download_pagefind(url, dest_path):
+    print(f&quot;[INFO] Downloading PageFind from {url}...&quot;)
+    try:
+        urllib.request.urlretrieve(url, dest_path)
+    except Exception as e:
+        print(f&quot;[ERROR] Download failed: {e}&quot;)
+        sys.exit(1)
+
+# Extract the downloaded PageFind archive
+def extract_pagefind(archive_path):
+    print(&quot;[INFO] Extracting PageFind...&quot;)
+
+    if archive_path.endswith(&quot;.zip&quot;):
+        with zipfile.ZipFile(archive_path, &quot;r&quot;) as zip_ref:
+            zip_ref.extractall(PAGEFIND_DIR)
+    else:
+        with tarfile.open(archive_path, &quot;r:gz&quot;) as tar_ref:
+            tar_ref.extractall(PAGEFIND_DIR)
+        os.chmod(os.path.join(PAGEFIND_DIR, &quot;pagefind&quot;), 0o755)  # Make executable
+
+    os.remove(archive_path)  # Cleanup
+    print(&quot;[SUCCESS] PageFind installed successfully!&quot;)
+
+# Run the PageFind binary
+def run_pagefind():
+    try:
+        print(&quot;[INFO] Running PageFind...&quot;)
+        subprocess.run([os.path.join(PAGEFIND_DIR, &quot;pagefind&quot;)], check=True)
+        print(&quot;[SUCCESS] PageFind ran successfully!&quot;)
+    except subprocess.CalledProcessError as e:
+        print(f&quot;[ERROR] PageFind failed to run: {e}&quot;)
+        sys.exit(1)
+
+# Index pages for searching
+def index_pagefind():
+    print(&quot;[INFO] Indexing site with PageFind...&quot;)
+    try:
+        subprocess.run([os.path.join(PAGEFIND_DIR, &quot;pagefind&quot;), &quot;index&quot;, &quot;--site&quot;, &quot;public&quot;], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f&quot;[ERROR] Indexing failed: {e}&quot;)
+        sys.exit(1)
+
+# Main installation process
+def install_pagefind():
+    if is_installed():
+        print(&quot;[INFO] PageFind already configured.&quot;)
+        index_pagefind()
+        return
+
+    os.makedirs(PAGEFIND_DIR, exist_ok=True)
+    url, bin_name = get_download_url()
+    archive_path = os.path.join(PAGEFIND_DIR, &quot;pagefind_download&quot;)
+
+    download_pagefind(url, archive_path)
+    extract_pagefind(archive_path)
+    run_pagefind()
+
+if __name__ == &quot;__main__&quot;:
+    install_pagefind()
+</code></pre></div>
             </div>
         </div>
 
@@ -144,5 +251,5 @@
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2025-06-22 09:34:34.972516+00:00
+Build Date UTC : 2025-06-22 09:53:18.830163+00:00
 -->
